@@ -51,7 +51,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$ScriptVersion = '1.0.3'
+$ScriptVersion = '1.0.5'
 $ResumeTaskName = 'UbuntuHyperVDesktopProvisioner-Resume'
 $UbuntuReleaseRoot = 'https://releases.ubuntu.com'
 $GuestUsername = 'ubuntu'
@@ -531,6 +531,11 @@ $networkYaml
           AutomaticLoginEnable=true
           AutomaticLogin=$GuestUsername
           WaylandEnable=true
+      - path: /home/$GuestUsername/.config/gnome-initial-setup-done
+        owner: $GuestUsername`:$GuestUsername
+        permissions: '0644'
+        content: |
+          Ubuntu Hyper-V Desktop provisioner completed GNOME initial setup.
       - path: /etc/systemd/system/ubuntu-hyperv-desktop-ready.service
         owner: root:root
         permissions: '0644'
@@ -546,6 +551,7 @@ $networkYaml
           [Install]
           WantedBy=graphical.target
     runcmd:
+      - [ bash, -lc, "install -d -m 0755 -o $GuestUsername -g $GuestUsername /home/$GuestUsername/.config/gnome-initial-setup && version=`$(. /etc/os-release; printf '%s' `${VERSION_ID}) && printf '%s\\n' 'Ubuntu Hyper-V Desktop provisioner completed GNOME initial setup.' > /home/$GuestUsername/.config/gnome-initial-setup-done && printf '%s\\n' 'Ubuntu Hyper-V Desktop provisioner completed the release upgrade setup.' > /home/$GuestUsername/.config/gnome-initial-setup/upgrade-`$version-done && chown $GuestUsername`:$GuestUsername /home/$GuestUsername/.config/gnome-initial-setup-done /home/$GuestUsername/.config/gnome-initial-setup/upgrade-`$version-done" ]
       - [ bash, -lc, "systemctl set-default graphical.target" ]
       - [ bash, -lc, "systemctl daemon-reload" ]
       - [ bash, -lc, "systemctl enable gdm3" ]
@@ -893,7 +899,7 @@ function Verify-GuestDesktop {
         [Parameter(Mandatory = $true)][string]$Ip,
         [Parameter(Mandatory = $true)][string]$PrivateKey
     )
-    $command = 'set -eu; test "$(. /etc/os-release; printf %s "$PRETTY_NAME")" != ""; systemctl is-active --quiet ssh; systemctl is-active --quiet gdm3; test "$(systemctl get-default)" = graphical.target; grep -q "AutomaticLoginEnable=true" /etc/gdm3/custom.conf; grep -q "AutomaticLogin=ubuntu" /etc/gdm3/custom.conf; loginctl list-users --no-legend | awk ''$2 == "ubuntu" { found=1 } END { exit(found ? 0 : 1) }''; sessions=$(loginctl list-sessions --no-legend | awk ''$3 == "ubuntu" { print $1 }''); test -n "$sessions"; graphical=0; for session in $sessions; do session_type=$(loginctl show-session "$session" -p Type --value); session_state=$(loginctl show-session "$session" -p State --value); if { [ "$session_type" = "wayland" ] || [ "$session_type" = "x11" ]; } && { [ "$session_state" = "active" ] || [ "$session_state" = "online" ]; }; then graphical=1; fi; done; test "$graphical" -eq 1; echo UBUNTU_DESKTOP_VERIFIED'
+    $command = 'set -eu; test "$(. /etc/os-release; printf %s "$PRETTY_NAME")" != ""; systemctl is-active --quiet ssh; systemctl is-active --quiet gdm3; test "$(systemctl get-default)" = graphical.target; grep -q "AutomaticLoginEnable=true" /etc/gdm3/custom.conf; grep -q "AutomaticLogin=ubuntu" /etc/gdm3/custom.conf; test -f /home/ubuntu/.config/gnome-initial-setup-done; if ps -eo comm= | awk ''$1 == "gnome-initial-s" { found=1 } END { exit(found ? 0 : 1) }''; then exit 1; fi; loginctl list-users --no-legend | awk ''$2 == "ubuntu" { found=1 } END { exit(found ? 0 : 1) }''; sessions=$(loginctl list-sessions --no-legend | awk ''$3 == "ubuntu" { print $1 }''); test -n "$sessions"; graphical=0; for session in $sessions; do session_type=$(loginctl show-session "$session" -p Type --value); session_state=$(loginctl show-session "$session" -p State --value); if { [ "$session_type" = "wayland" ] || [ "$session_type" = "x11" ]; } && { [ "$session_state" = "active" ] || [ "$session_state" = "online" ]; }; then graphical=1; fi; done; test "$graphical" -eq 1; echo UBUNTU_DESKTOP_VERIFIED'
     $probe = Invoke-SshGuest -Ip $Ip -PrivateKey $PrivateKey -Command $command
     if ($probe.ExitCode -ne 0 -or $probe.Stdout -notmatch 'UBUNTU_DESKTOP_VERIFIED') {
         throw "Guest verification failed. $($probe.Stderr.Trim()) $($probe.Stdout.Trim())"

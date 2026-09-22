@@ -21,11 +21,14 @@ Hyper-V guest:
 - Ubuntu Desktop with GNOME and GDM3;
 - the exact requested credentials `ubuntu` / `ubuntu`;
 - graphical automatic login as `ubuntu` after every boot;
+- GNOME first-run and release-upgrade onboarding completed automatically;
 - SSH, Git, build tools, and common utilities;
 - Secure Boot enabled and a dynamically expanding VHDX;
 - an existing Hyper-V switch reused, or an internal NAT switch created;
 - VMConnect opened only after SSH, cloud-init, GDM3, graphical.target, the
-  automatic-login configuration, and the logged-in user have been verified.
+automatic-login configuration, the active graphical session, the GNOME
+completion markers, and the absence of the first-run onboarding process have
+been verified.
 
 The autoinstall deliberately powers the VM off after the OS installation. The
 host then removes the installer ISO from the boot path, boots the installed
