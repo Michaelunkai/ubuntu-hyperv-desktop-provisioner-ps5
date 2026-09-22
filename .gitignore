@@ -1,0 +1,10 @@
+cache/
+keys/
+VMs/
+*.iso
+*.iso.download
+*.vhdx
+*.vhdx.json
+*.json
+*.log
+resume.json
