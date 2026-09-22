@@ -88,6 +88,18 @@ reused first, then Hyper-V's Default Switch, then an external switch, and only
 then a new internal NAT switch is created. Internal NAT uses a deterministic
 static guest address because Windows NetNat does not provide DHCP.
 
+## Remove the managed deployment
+
+To stop and remove the GUI VM and reclaim the deployment's C: storage, run the
+companion cleanup script from elevated Windows PowerShell 5.1:
+
+    powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "F:\study\Operating_Systems\Windows\Administration\Virtualization\Hyper-V\Ubuntu\Provisioning\PowerShell5\UbuntuHyperVDesktopProvisioner\Remove-UbuntuHyperVDesktop.ps1"
+
+The cleanup is deliberately scoped to this project's exact managed VM,
+VHDX/ISO/state root, seed-test directory, NAT switch, NAT object, resume task,
+and the `xorriso` WSL transaction installed by the provisioner. It verifies
+that those resources are gone and leaves the WSL distribution itself intact.
+
 ## Validation
 
 The parser/static test does not enable features, download an ISO, create a VM,

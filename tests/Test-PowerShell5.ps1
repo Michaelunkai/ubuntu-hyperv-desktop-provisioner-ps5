@@ -7,6 +7,8 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $scriptPath = Join-Path $projectRoot 'Install-UbuntuHyperVDesktop.ps1'
 if (-not (Test-Path -LiteralPath $scriptPath)) { throw "Missing script: $scriptPath" }
+$cleanupPath = Join-Path $projectRoot 'Remove-UbuntuHyperVDesktop.ps1'
+if (-not (Test-Path -LiteralPath $cleanupPath)) { throw "Missing cleanup script: $cleanupPath" }
 
 $tokens = $null
 $errors = $null
@@ -42,6 +44,22 @@ $requiredText = @(
 )
 foreach ($text in $requiredText) {
     if ($source -notlike "*$text*") { throw "Static assertion failed; missing: $text" }
+}
+
+$cleanupSource = Get-Content -LiteralPath $cleanupPath -Raw
+$cleanupText = @(
+    'Remove-VM',
+    'Remove-VMSwitch',
+    'Remove-NetNat',
+    'Ubuntu-HyperV-Desktop-Provisioner',
+    'Ubuntu-Desktop-Auto-NAT',
+    '$NatName = "$VirtualSwitchName-NAT"',
+    'apt-get remove',
+    'Directory]::Delete',
+    'UbuntuHyperVDesktopProvisioner-Resume'
+)
+foreach ($text in $cleanupText) {
+    if ($cleanupSource -notlike "*$text*") { throw "Cleanup static assertion failed; missing: $text" }
 }
 
 Write-Host 'PowerShell 5.1 parser/static test passed.' -ForegroundColor Green
